@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#275844">
+<title>新疆游 · 共享物品</title>
+<style>
+:root{--bg:#f4f1e8;--card:#fffdf8;--green:#275844;--green2:#e8f0eb;--text:#1d2922;--muted:#758078;--line:#ded9ce;--warn:#a75d29;--red:#9b4332}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:linear-gradient(#eaf1eb,#f4f1e8 340px);color:var(--text)}
+main{max-width:760px;margin:auto;padding:15px 13px 80px}
+.hero{background:linear-gradient(135deg,#214d39,#547861);color:#fff;padding:19px;border-radius:22px;box-shadow:0 10px 28px #183d2b22}
+.hero h1{font-size:24px;margin:0 0 7px} .hero p{margin:0;opacity:.88;font-size:14px}
+.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.status{font-size:12px;padding:5px 9px;background:#ffffff1c;border-radius:99px;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.stat{background:#ffffff18;padding:9px;border-radius:12px;text-align:center} .stat b{display:block;font-size:19px} .stat span{font-size:11px;opacity:.86}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-top:13px;box-shadow:0 4px 14px #2221}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input,select,button{font:inherit} input,select{border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px;min-width:0}
+.flex{flex:1;min-width:120px} button{border:0;border-radius:11px;padding:9px 11px;background:var(--green);color:#fff;cursor:pointer}
+button.secondary{background:var(--green2);color:var(--green)} button.danger{background:#f4e7e1;color:var(--red)}
+.item{padding:12px 0;border-bottom:1px dashed var(--line)} .item:last-child{border-bottom:0}
+.name{font-weight:750;font-size:16px} .meta{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.7}
+.badge{display:inline-block;background:#edf2ed;border-radius:99px;padding:2px 7px;margin-right:4px;color:#496052} .warn{background:#fff0e5;color:var(--warn)}
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px} .empty{text-align:center;color:var(--muted);padding:25px 5px}
+.filters{display:flex;gap:7px;overflow:auto;margin-top:10px;padding-bottom:2px} .chip{white-space:nowrap;background:#ece8de;color:#536159}
+.chip.active{background:var(--green);color:#fff} .small{font-size:12px;color:var(--muted);line-height:1.6} .error{color:#a23d2d}
+</style>
+</head>
+<body>
+<main>
+<section class="hero">
+<div class="top"><div><h1>🏔️ 新疆游 · 共享物品</h1><p>同一个链接，大家一起认领和整理行李</p></div><div id="status" class="status">连接中…</div></div>
+<div class="stats"><div class="stat"><b id="allN">0</b><span>全部</span></div><div class="stat"><b id="claimedN">0</b><span>已认领</span></div><div class="stat"><b id="needN">0</b><span>待认领</span></div></div>
+</section>
+
+<section class="card">
+<div class="row">
+<input id="itemName" class="flex" placeholder="物品，如：对讲机">
+<input id="qty" value="1" style="width:78px" placeholder="数量">
+<select id="category"><option>公共</option><option>药品</option><option>摄影</option><option>电子</option><option>户外</option><option>食品</option><option>洗护</option><option>其他</option></select>
+</div>
+<div class="row" style="margin-top:8px">
+<input id="note" class="flex" placeholder="备注，如：2台即可 / 必带">
+<input id="member" class="flex" placeholder="你的名字">
+<button onclick="addItem()">+ 添加</button>
+</div>
+<div id="filters" class="filters"></div>
+</section>
+
+<section class="card"><div id="list"></div></section>
+
+<section class="card">
+<div class="row"><button onclick="copyList()">复制微信群清单</button><button class="secondary" onclick="refresh()">立即同步</button></div>
+<p class="small">页面约每 3 秒同步一次。姓名只保存在当前手机浏览器。</p>
+<div id="err" class="small error"></div>
+</section>
+</main>
+
+<script>
+const ENV="xinjiang-trip-d6gjl2csc6920ba77";
+const TOKEN="eyJhbGciOiJSUzI1NiIsImtpZCI6ImFlMTM1ZWM5LTE4YTYtNDUzNC04ZTI0LTdlZTZhZDZkYTFhYSJ9.eyJpc3MiOiJodHRwczovL3hpbmppYW5nLXRyaXAtZDZnaWoyY3NjNjkyMGJhNzcuYXAtc2hhbmdoYWkudGNiLWFwaS50ZW5jZW50Y2xvdWRhcGkuY29tIiwic3ViIjoiYW5vbiIsImF1ZCI6InhpbmppYW5nLXRyaXAtZDZnaWoyY3NjNjkyMGJhNzciLCJleHAiOjQwOTE5NDQ4NDUsImlhdCI6MTc4ODI2MTY0NSwibm9uY2UiOiJPRHczNGdURVI5LVFma2Y0OS13Q3NBIiwiYXRfaGFzaCI6Ik9EdzM0Z1RFUjktUWZrZjQ5LXdDc0EiLCJuYW1lIjoiQW5vbnltb3VzIiwic2NvcGUiOiJhbm9ueW1vdXMiLCJwcm9qZWN0X2lkIjoieGluamlhbmctdHJpcC1kNmdpajJjc2M2OTIwYmE3NyIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.EIGSXaAPAafLZsA13WKfk_7y9Z9l2GHP5uiujU12IPyfcNl-qAxx3Ojf2aiIIvpM77fvtPx1wwGAUMKoU5Ph_QtIXahebdkOsPmIKv--BlNB3DKVEfEXmiTEDpSf70_a7bxj8rmKYPxyy4HKy8oHSPzJdWqLwf91lNvT7fyMo-RKzHKZWEFNKt5VfshB1MBSCAcAKTZNVwkfMhpseeHaA9LEhA2GlqFy8FjtjgIrOTc_GiRegPiYuQu8HeB8cTNff4eaK8_-CW00v7a2YooRoRSjzwltw3hIpTCMSFzC7cgT4v7B1ooLIZ8bfj1hvZVGSHapIhkpuxSgQyGrQT-7Zg";
+const API=`https://${ENV}.api.tcloudbasegateway.com/v1/rdb/rest/trip_items`;
+let items=[], filter='全部', busy=false;
+const cats=['全部','待认领','已认领','公共','药品','摄影','电子','户外','食品','洗护','其他'];
+const baseHeaders={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'};
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function uid(){return crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)}
+function setStatus(t,bad=false){status.textContent=t;err.textContent=bad?t:''}
+function setFilter(x){filter=x;render()}
+function filtered(){return items.filter(x=>filter==='全部'?true:filter==='待认领'?!x.owner:filter==='已认领'?!!x.owner:x.category===filter)}
+function render(){
+ allN.textContent=items.length;claimedN.textContent=items.filter(x=>x.owner).length;needN.textContent=items.filter(x=>!x.owner).length;
+ filters.innerHTML=cats.map(c=>`<button class="chip ${c===filter?'active':''}" onclick="setFilter('${c}')">${c}</button>`).join('');
+ const a=filtered();
+ list.innerHTML=a.length?a.map(x=>`<div class="item"><div class="name">${esc(x.name)} × ${esc(x.qty)}</div><div class="meta"><span class="badge">${esc(x.category||'其他')}</span>${x.owner?`<span class="badge">${esc(x.owner)}来带</span>`:`<span class="badge warn">待认领</span>`}${x.packed?`<span class="badge">✓ 已装包</span>`:''}${x.note?`<br>${esc(x.note)}`:''}</div><div class="actions">${x.owner?`<button class="secondary" onclick="pack('${x.id}',${!x.packed})">${x.packed?'取消装包':'已装包'}</button><button class="secondary" onclick="unclaim('${x.id}')">取消认领</button>`:`<button onclick="claim('${x.id}')">我来带</button>`}<button class="danger" onclick="delItem('${x.id}')">删除</button></div></div>`).join(''):'<div class="empty">还没有物品，先添加第一件吧。</div>';
+}
+async function req(url,opt={}){
+ const r=await fetch(url,{...opt,headers:{...baseHeaders,...(opt.headers||{})}});
+ if(!r.ok){const tx=await r.text();throw new Error(`${r.status} ${tx.slice(0,220)}`)}
+ if(r.status===204)return null;
+ const tx=await r.text();return tx?JSON.parse(tx):null;
+}
+async function refresh(){
+ if(busy)return;
+ try{const d=await req(API+'?select=*&order=created_at.asc');items=Array.isArray(d)?d:[];render();setStatus('已同步 '+new Date().toLocaleTimeString().slice(0,5));}
+ catch(e){setStatus('连接失败',true);err.textContent='数据库连接失败：'+e.message;}
+}
+async function addItem(){
+ const n=itemName.value.trim();if(!n)return alert('先输入物品名称');
+ busy=true;
+ try{await req(API,{method:'POST',headers:{'Prefer':'return=minimal'},body:JSON.stringify({id:uid(),name:n,qty:qty.value.trim()||'1',category:category.value,note:note.value.trim(),owner:'',packed:false})});itemName.value='';note.value='';}
+ catch(e){err.textContent='添加失败：'+e.message}
+ finally{busy=false;await refresh()}
+}
+function getMember(){let m=member.value.trim();if(!m)m=prompt('请输入你的名字')||'';if(m){member.value=m;localStorage.setItem('xj_member',m)}return m}
+async function patch(id,obj){busy=true;try{await req(API+'?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:{'Prefer':'return=minimal'},body:JSON.stringify(obj)})}catch(e){err.textContent='保存失败：'+e.message}finally{busy=false;await refresh()}}
+async function claim(id){const m=getMember();if(m)await patch(id,{owner:m})}
+async function unclaim(id){await patch(id,{owner:'',packed:false})}
+async function pack(id,v){await patch(id,{packed:v})}
+async function delItem(id){if(!confirm('确定删除这件物品？'))return;busy=true;try{await req(API+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:{'Prefer':'return=minimal'}})}catch(e){err.textContent='删除失败：'+e.message}finally{busy=false;await refresh()}}
+function makeText(){
+ const need=items.filter(x=>!x.owner),done=items.filter(x=>x.owner);let t='🏔️ 新疆游共享物品清单\n\n';
+ if(need.length){t+='⚠️ 待认领\n';need.forEach(x=>t+=`• ${x.name} × ${x.qty}${x.note?'（'+x.note+'）':''}\n`)}
+ if(done.length){t+='\n✅ 已认领\n';done.forEach(x=>t+=`• ${x.name} × ${x.qty} — ${x.owner}${x.packed?'【已装包】':''}${x.note?'（'+x.note+'）':''}\n`)}
+ return t+`\n共 ${items.length} 件｜已认领 ${done.length}｜待认领 ${need.length}`;
+}
+async function copyList(){try{await navigator.clipboard.writeText(makeText());alert('已复制，可直接发微信群')}catch(e){alert(makeText())}}
+member.value=localStorage.getItem('xj_member')||'';member.oninput=()=>localStorage.setItem('xj_member',member.value.trim());
+render();refresh();setInterval(refresh,3000);
+</script>
+</body>
+</html>
