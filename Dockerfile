@@ -3,4 +3,4 @@ WORKDIR /app
 COPY . .
 ENV PORT=80
 EXPOSE 80
-CMD ["node", "server.js"]
+CMD ["node","server.js"]
