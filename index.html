@@ -70,8 +70,8 @@ async function refresh(){
 }
 async function addItem(){
  const n=itemName.value.trim();if(!n)return alert('先输入物品名称');busy=true;
- try{await req('/api/items',{method:'POST',body:JSON.stringify({id:uid(),name:n,qty:qty.value.trim()||'1',category:category.value,note:note.value.trim(),owner:'',packed:false})});itemName.value='';note.value=''}
- catch(e){err.textContent='添加失败：'+e.message}finally{busy=false;await refresh()}
+ try{await req('/api/items',{method:'POST',body:JSON.stringify({name:n,qty:qty.value.trim()||'1',category:category.value,note:note.value.trim(),owner:'',packed:false})});itemName.value='';note.value=''}
+ catch(e){setStatus('添加失败',true);err.textContent='添加失败：'+e.message;alert('添加失败：'+e.message)}finally{busy=false;await refresh()}
 }
 function getMember(){let m=member.value.trim();if(!m)m=prompt('请输入你的名字')||'';if(m){member.value=m;localStorage.setItem('xj_member',m)}return m}
 async function patch(id,obj){busy=true;try{await req('/api/items/'+encodeURIComponent(id),{method:'PATCH',body:JSON.stringify(obj)})}catch(e){err.textContent='保存失败：'+e.message}finally{busy=false;await refresh()}}

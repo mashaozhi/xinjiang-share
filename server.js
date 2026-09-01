@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const PORT = process.env.PORT || 80;
 const ENV = "xinjiang-trip-d6gij2csc6920ba77";
@@ -38,10 +39,20 @@ const server = http.createServer(async (req, res) => {
     if (u.pathname === '/api/items' && req.method === 'POST') {
       let body=''; for await (const c of req) body += c;
       const data = JSON.parse(body || '{}');
+      const row = {
+        id: data.id || crypto.randomUUID(),
+        name: data.name || '',
+        qty: data.qty || '1',
+        category: data.category || '公共',
+        note: data.note || '',
+        owner: data.owner || '',
+        packed: Boolean(data.packed),
+        created_at: data.created_at || new Date().toISOString()
+      };
       await dbFetch(DB, {
         method:'POST',
         headers:{'Prefer':'return=minimal'},
-        body:JSON.stringify(data)
+        body:JSON.stringify(row)
       });
       return sendJson(res, 200, {ok:true});
     }
